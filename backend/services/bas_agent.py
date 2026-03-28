@@ -1,69 +1,40 @@
-"""
-CyberSentinel AI — Breach and Attack Simulation (BAS) Agent
-Red team attack simulation logic against a simulated banking network.
-"""
-
 import asyncio
 import random
-import uuid
+import networkx as nx
+import json
+from datetime import datetime
 from typing import AsyncGenerator
 
 from models.schemas import SimulationOutcome, SimulationStep
-from services.claude_service import claude_service
+from services.llm_orchestrator import LLMOrchestrator
 from services.mock_data import log_generator, LogEntry, EventType, SeverityLevel
 
+llm_orchestrator = LLMOrchestrator()
 
-# Simulated banking network topology
-NETWORK_TOPOLOGY = {
-    "internet": {
-        "connected_to": ["dmz_firewall"],
-        "ip": "external",
-        "vulnerabilities": [],
-        "description": "Public Internet",
-    },
-    "dmz_firewall": {
-        "connected_to": ["web_server", "api_gateway"],
-        "ip": "10.0.0.1",
-        "vulnerabilities": [],
-        "description": "DMZ Perimeter Firewall",
-    },
-    "web_server": {
-        "connected_to": ["internal_firewall"],
-        "ip": "10.0.1.10",
-        "vulnerabilities": ["CVE-2024-XXXX"],
-        "description": "Public Web Server",
-    },
-    "api_gateway": {
-        "connected_to": ["internal_firewall"],
-        "ip": "10.0.1.20",
-        "vulnerabilities": [],
-        "description": "API Gateway",
-    },
-    "internal_firewall": {
-        "connected_to": ["core_banking", "employee_network"],
-        "ip": "10.0.1.1",
-        "vulnerabilities": [],
-        "description": "Internal Firewall",
-    },
-    "core_banking": {
-        "connected_to": ["database_server"],
-        "ip": "10.0.2.10",
-        "vulnerabilities": ["weak_credentials"],
-        "description": "Core Banking Server",
-    },
-    "employee_network": {
-        "connected_to": ["core_banking"],
-        "ip": "10.0.3.0/24",
-        "vulnerabilities": ["phishing"],
-        "description": "Employee Workstation Network",
-    },
-    "database_server": {
-        "connected_to": [],
-        "ip": "10.0.2.20",
-        "vulnerabilities": ["sql_injection"],
-        "description": "Customer Database Server",
-    },
-}
+def generate_banking_topology() -> nx.DiGraph:
+    """Generate dynamic topology via NetworkX to map shortest paths & connected components."""
+    G = nx.DiGraph()
+    nodes = [
+        ("internet", {"ip": "external", "vulnerabilities": [], "description": "Public Internet"}),
+        ("dmz_firewall", {"ip": "10.0.0.1", "vulnerabilities": [], "description": "DMZ Perimeter Firewall"}),
+        ("web_server", {"ip": "10.0.1.10", "vulnerabilities": ["CVE-2024-XXXX"], "description": "Public Web Server"}),
+        ("api_gateway", {"ip": "10.0.1.20", "vulnerabilities": [], "description": "API Gateway"}),
+        ("internal_firewall", {"ip": "10.0.1.1", "vulnerabilities": [], "description": "Internal Firewall"}),
+        ("core_banking", {"ip": "10.0.2.10", "vulnerabilities": ["weak_credentials"], "description": "Core Banking Server"}),
+        ("employee_network", {"ip": "10.0.3.0/24", "vulnerabilities": ["phishing"], "description": "Employee Workstation Network"}),
+        ("database_server", {"ip": "10.0.2.20", "vulnerabilities": ["sql_injection"], "description": "Customer Database Server"}),
+    ]
+    edges = [
+        ("internet", "dmz_firewall"),
+        ("dmz_firewall", "web_server"), ("dmz_firewall", "api_gateway"),
+        ("web_server", "internal_firewall"), ("api_gateway", "internal_firewall"),
+        ("internal_firewall", "core_banking"), ("internal_firewall", "employee_network"),
+        ("employee_network", "core_banking"),
+        ("core_banking", "database_server")
+    ]
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
+    return G
 
 # Speed delays in seconds
 SPEED_DELAYS = {
@@ -72,7 +43,6 @@ SPEED_DELAYS = {
     "fast": 1.0,
 }
 
-# Scenario starting configurations
 SCENARIO_CONFIGS = {
     "credential_stuffing_core_banking": {
         "name": "Credential Stuffing → Core Banking",
@@ -100,12 +70,11 @@ SCENARIO_CONFIGS = {
     },
 }
 
-
 class BASAgent:
     """Red Team Breach and Attack Simulation Agent."""
 
     def __init__(self) -> None:
-        self.network = NETWORK_TOPOLOGY
+        self.network = generate_banking_topology()
         self.current_position = "internet"
         self.compromised_nodes: list[str] = []
         self.discovered_vulns: list[str] = []
@@ -135,7 +104,6 @@ class BASAgent:
 
         for step_num in range(1, max_steps + 1):
             if self.should_abort:
-                # Yield abort step
                 yield SimulationStep(
                     step_number=step_num,
                     action="Simulation Aborted",
@@ -149,13 +117,31 @@ class BASAgent:
                 )
                 break
 
-            # Get Claude's attack plan (or fallback)
-            attack_plan = await claude_service.plan_attack_step(
-                network=self.network,
-                current_position=self.current_position,
-                history=self.attack_history,
-                step_number=step_num,
-            )
+            # Fetch shortest path length to goal via NetworkX 
+            # to feed context into the LLM orchestrator
+            try:
+                distance_to_goal = nx.shortest_path_length(self.network, source=self.current_position, target=config["goal"])
+            except nx.NetworkXNoPath:
+                distance_to_goal = -1
+                
+            available_paths = list(self.network.successors(self.current_position))
+            
+            context = f"Current position: {self.current_position}, Available moves: {available_paths}, Goal: {config['goal']} (Dist: {distance_to_goal}). You must output valid JSON only containing: 'action', 'target_node', 'technique', 'reasoning', 'success_probability'."
+
+            try:
+                llm_response = await llm_orchestrator.get_red_team_action(scenario, context)
+                if "```json" in llm_response:
+                    llm_response = llm_response.split("```json")[1].split("```")[0]
+                attack_plan = json.loads(llm_response)
+            except Exception as e:
+                # LLM Parse Failure logic
+                attack_plan = {
+                    "action": f"Lateral movement towards {config['goal']}",
+                    "target_node": available_paths[0] if available_paths else config["goal"],
+                    "technique": "Mock Fallback Technique T1021",
+                    "reasoning": "Fallback reasoning due to LLM parsing error.",
+                    "success_probability": 0.6
+                }
 
             # Check for retreat/exfiltrate
             action = attack_plan.get("action", "")
@@ -178,21 +164,20 @@ class BASAgent:
 
             # Evaluate the attack action
             target_node = attack_plan.get("target_node", "")
-            success_prob = attack_plan.get("success_probability", 0.5)
+            success_prob = float(attack_plan.get("success_probability", 0.5))
             outcome = self._evaluate_attack(target_node, success_prob)
 
-            # Generate logs for the attack
             generated_logs = self._generate_attack_logs(attack_plan, outcome)
             log_ids = [log.id for log in generated_logs]
 
             # Update state on success
             if outcome == SimulationOutcome.SUCCESS:
-                if target_node in self.network:
+                if target_node in self.network.nodes:
                     self.current_position = target_node
                     if target_node not in self.compromised_nodes:
                         self.compromised_nodes.append(target_node)
-                    # Discover vulnerabilities
-                    node_vulns = self.network.get(target_node, {}).get("vulnerabilities", [])
+                    
+                    node_vulns = self.network.nodes[target_node].get("vulnerabilities", [])
                     for v in node_vulns:
                         if v not in self.discovered_vulns:
                             self.discovered_vulns.append(v)
@@ -217,15 +202,13 @@ class BASAgent:
 
             yield step
 
-            # Check if goal reached
             if self.current_position == config["goal"]:
-                # Final exfiltration step
                 yield SimulationStep(
                     step_number=step_num + 1,
                     action="Objective Achieved — Data Exfiltration",
                     target=config["goal"],
                     technique="T1041 — Exfiltration Over C2 Channel",
-                    reasoning=f"Successfully reached {config['goal']}. Customer data is now accessible for exfiltration.",
+                    reasoning=f"Successfully reached {config['goal']}. Customer data is now accessible for exfiltration via RedTeam node.",
                     outcome=SimulationOutcome.SUCCESS,
                     logs_generated=[],
                     network_position=self.current_position,
@@ -239,30 +222,32 @@ class BASAgent:
 
     def _evaluate_attack(self, target_node: str, success_prob: float) -> SimulationOutcome:
         """Evaluate whether an attack step succeeds against the simulated network."""
-        if target_node not in self.network:
+        if target_node not in self.network.nodes:
             return SimulationOutcome.FAILED
 
-        # Check if the target is reachable from current position
-        current_connections = self.network.get(self.current_position, {}).get("connected_to", [])
-        # Allow if target is directly connected OR if we're attacking from a compromised adjacent node
-        is_reachable = (
-            target_node in current_connections
-            or target_node == self.current_position
-            or any(
-                target_node in self.network.get(comp, {}).get("connected_to", [])
-                for comp in self.compromised_nodes
-            )
-        )
-
-        if not is_reachable:
+        # Using NetworkX to verify reachability dynamically from compromised graphs
+        # Can we trace back from the target to our current position through compromised nodes?
+        reachable = False
+        try:
+            if nx.has_path(self.network, self.current_position, target_node):
+                if nx.shortest_path_length(self.network, self.current_position, target_node) == 1:
+                    reachable = True
+            
+            for comp in self.compromised_nodes:
+                if nx.has_path(self.network, comp, target_node):
+                    if nx.shortest_path_length(self.network, comp, target_node) == 1:
+                        reachable = True
+        except nx.NodeNotFound:
+            pass
+            
+        if not reachable:
             return SimulationOutcome.FAILED
 
-        # Check vulnerabilities for bonus probability
-        target_vulns = self.network.get(target_node, {}).get("vulnerabilities", [])
+        # Bonus probability for matching known vulns
+        target_vulns = self.network.nodes[target_node].get("vulnerabilities", [])
         if target_vulns:
             success_prob = min(success_prob + 0.15, 0.95)
 
-        # Roll the dice
         roll = random.random()
         if roll < success_prob:
             return SimulationOutcome.SUCCESS
@@ -272,23 +257,24 @@ class BASAgent:
             return SimulationOutcome.FAILED
 
     def _generate_attack_logs(self, attack_plan: dict, outcome: SimulationOutcome) -> list[LogEntry]:
-        """Generate realistic log entries for an attack action."""
-        logs: list[LogEntry] = []
+        logs = []
         target = attack_plan.get("target_node", "unknown")
         action = attack_plan.get("action", "")
-        target_ip = self.network.get(target, {}).get("ip", "10.0.0.0")
+        
+        target_ip = self.network.nodes.get(target, {}).get("ip", "10.0.0.0") if target in self.network.nodes else "10.0.0.0"
+        
         technique = attack_plan.get("technique", "")
-
         severity = SeverityLevel.HIGH if outcome == SimulationOutcome.SUCCESS else SeverityLevel.MEDIUM
 
-        # Generate 2-4 related log entries per attack step
         log_count = random.randint(2, 4)
         for i in range(log_count):
             event_type = random.choice([EventType.FIREWALL, EventType.NETWORK_ANOMALY, EventType.ENDPOINT])
+            
+            curr_ip = self.network.nodes.get(self.current_position, {}).get("ip", "external") if self.current_position in self.network.nodes else "external"
 
             log = LogEntry(
-                timestamp=__import__("datetime").datetime.utcnow().isoformat() + "Z",
-                source_ip=self.network.get(self.current_position, {}).get("ip", "external"),
+                timestamp=datetime.utcnow().isoformat() + "Z",
+                source_ip=curr_ip,
                 event_type=event_type,
                 severity=severity if i == 0 else SeverityLevel.MEDIUM,
                 raw_message=f"[BAS] {action} targeting {target} ({target_ip}) — {technique} — Outcome: {outcome.value}",

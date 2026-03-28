@@ -6,6 +6,7 @@ import axios from "axios";
 import { useStore } from "@/store/useStore";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import ThreatStats from "@/components/ThreatStats";
+import AnalyticsChart from "@/components/AnalyticsChart";
 import LogFeed from "@/components/LogFeed";
 import ThreatAlert from "@/components/ThreatAlert";
 import type { LogEntry, ThreatAnalysis, AttackScenario } from "@/types";
@@ -139,6 +140,9 @@ export default function Dashboard() {
 
       {/* Stats Bar */}
       <ThreatStats />
+
+      {/* Embedded XGBoost Analytics Chart */}
+      <AnalyticsChart />
 
       {/* Attack Injection Controls */}
       <div

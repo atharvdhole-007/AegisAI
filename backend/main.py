@@ -13,11 +13,31 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from routers import ingest, analysis, playbook, chat, simulation
 from services.mock_data import log_generator
+from aiokafka.admin import AIOKafkaAdminClient, NewTopic
 
 load_dotenv()
 
 # Background task handle
 background_task = None
+
+async def create_kafka_topics():
+    broker_url = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    try:
+        admin_client = AIOKafkaAdminClient(bootstrap_servers=broker_url)
+        await admin_client.start()
+        topics = [
+            NewTopic(name="logs_raw", num_partitions=1, replication_factor=1),
+            NewTopic(name="simulation_events", num_partitions=1, replication_factor=1)
+        ]
+        await admin_client.create_topics(topics)
+        print("[Kafka] Topics created successfully")
+    except Exception as e:
+        print(f"[Kafka] Topic creation warning (may already exist): {e}")
+    finally:
+        try:
+            await admin_client.close()
+        except:
+            pass
 
 
 async def background_log_generator():
@@ -37,6 +57,9 @@ async def background_log_generator():
 async def lifespan(app: FastAPI):
     """Application lifespan — start/stop background tasks."""
     global background_task
+    # Setup Kafka Topics correctly
+    await create_kafka_topics()
+
     # Generate initial logs
     log_generator.generate_background_logs(count=30)
     # Start background log generation
