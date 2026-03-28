@@ -1,0 +1,315 @@
+@import "tailwindcss";
+
+/* ─── CyberSentinel AI — Design System ────────────────────────────────────── */
+
+@theme {
+  --color-bg-dark: #0F1117;
+  --color-bg-light: #F8FAFC;
+  --color-surface-dark: #1A1D2E;
+  --color-surface-light: #FFFFFF;
+  --color-primary: #6366F1;
+  --color-primary-hover: #818CF8;
+  --color-danger: #EF4444;
+  --color-danger-hover: #F87171;
+  --color-warning: #F59E0B;
+  --color-warning-hover: #FBBF24;
+  --color-success: #10B981;
+  --color-success-hover: #34D399;
+  --color-text-dark: #F1F5F9;
+  --color-text-light: #0F172A;
+  --color-text-muted: #94A3B8;
+  --color-border-dark: #2D3148;
+  --color-border-light: #E2E8F0;
+}
+
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.dark body,
+html.dark body {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
+}
+
+html:not(.dark) body {
+  background-color: var(--color-bg-light);
+  color: var(--color-text-light);
+}
+
+/* ─── Scrollbar Styling ──────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #2D3148;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6366F1;
+}
+
+/* ─── Severity Badges ────────────────────────────────────────────────────── */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  transition: all 150ms ease;
+}
+
+.badge-critical {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-high {
+  background-color: rgba(249, 115, 22, 0.15);
+  color: #F97316;
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.badge-medium {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-low {
+  background-color: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* ─── Simulation Badges ──────────────────────────────────────────────────── */
+
+.badge-success-outcome {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-failed-outcome {
+  background-color: rgba(107, 114, 128, 0.15);
+  color: #9CA3AF;
+  border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+.badge-partial-outcome {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* ─── Playbook Node Status ───────────────────────────────────────────────── */
+
+.node-pending {
+  border: 2px solid #6B7280;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.node-in-progress {
+  border: 2px solid #6366F1;
+  background: rgba(99, 102, 241, 0.1);
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+.node-complete {
+  border: 2px solid #10B981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.node-skipped {
+  border: 2px dashed #6B7280;
+  background: rgba(107, 114, 128, 0.05);
+  opacity: 0.6;
+}
+
+@keyframes pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(99, 102, 241, 0);
+  }
+}
+
+/* ─── Glass Effect ───────────────────────────────────────────────────────── */
+
+.glass {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass {
+  background: rgba(26, 29, 46, 0.8);
+  border: 1px solid rgba(45, 49, 72, 0.5);
+}
+
+.glass:not(.dark *) {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+/* ─── Card Styles ────────────────────────────────────────────────────────── */
+
+.card {
+  border-radius: 12px;
+  padding: 1.25rem;
+  transition: all 150ms ease;
+}
+
+.dark .card {
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border-dark);
+}
+
+.card:not(.dark *) {
+  background: var(--color-surface-light);
+  border: 1px solid var(--color-border-light);
+}
+
+.card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Chat Bubbles ───────────────────────────────────────────────────────── */
+
+.chat-bubble-user {
+  background: linear-gradient(135deg, #6366F1, #818CF8);
+  color: white;
+  border-radius: 16px 16px 4px 16px;
+  padding: 10px 16px;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+.chat-bubble-assistant {
+  border-radius: 16px 16px 16px 4px;
+  padding: 10px 16px;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+.dark .chat-bubble-assistant {
+  background: var(--color-surface-dark);
+  border: 1px solid var(--color-border-dark);
+  color: var(--color-text-dark);
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms ease forwards;
+}
+
+.animate-slide-right {
+  animation: slide-in-right 300ms ease forwards;
+}
+
+.animate-slide-left {
+  animation: slide-in-left 300ms ease forwards;
+}
+
+/* ─── ReactFlow Custom Styles ────────────────────────────────────────────── */
+
+.react-flow__background {
+  opacity: 0.3;
+}
+
+.react-flow__minimap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dark .react-flow__minimap {
+  background: var(--color-surface-dark) !important;
+}
+
+.react-flow__controls {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dark .react-flow__controls button {
+  background: var(--color-surface-dark);
+  border-color: var(--color-border-dark);
+  color: var(--color-text-dark);
+}
+
+.dark .react-flow__controls button:hover {
+  background: var(--color-primary);
+}
+
+/* ─── Monospace for logs ─────────────────────────────────────────────────── */
+
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ─── Utility Classes ────────────────────────────────────────────────────── */
+
+.text-gradient {
+  background: linear-gradient(135deg, #6366F1, #EC4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glow-primary {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+}
+
+.glow-danger {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
