@@ -120,8 +120,8 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy", "log_buffer_size": len(log_generator.log_buffer)}
+async def health():
+    return {"status": "ok"}
 
 
 @app.post("/api/reset")
