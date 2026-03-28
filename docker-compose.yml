@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:latest
+    image: confluentinc/cp-zookeeper:7.4.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -15,7 +13,7 @@ services:
       retries: 5
 
   kafka:
-    image: confluentinc/cp-kafka:latest
+    image: confluentinc/cp-kafka:7.4.0
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -24,10 +22,11 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 1
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
     healthcheck:
       test: nc -z localhost 9092 || exit 1
       interval: 15s
@@ -35,7 +34,7 @@ services:
       retries: 5
 
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
@@ -49,7 +48,7 @@ services:
       - ./backend:/app
       - ./data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/docs" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -69,7 +68,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5173"]
+      test: [ "CMD", "wget", "-qO-", "http://localhost:5173" ]
       interval: 10s
       timeout: 5s
       retries: 5
