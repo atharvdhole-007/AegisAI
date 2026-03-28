@@ -58,6 +58,7 @@ export default function SimulationPage() {
   const [speed, setSpeed] = useState("normal");
   const [report, setReport] = useState<SimulationReport | null>(null);
   const [generatingReport, setGeneratingReport] = useState(false);
+  const [connectionLost, setConnectionLost] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
 
   const getNodeStatus = useCallback(
@@ -107,11 +108,15 @@ export default function SimulationPage() {
       addSimulationStep(data as SimulationStep);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      if (useStore.getState().simulationRunning && event.code !== 1000 && event.code !== 1005) {
+        setConnectionLost(true);
+      }
       setSimulationRunning(false);
     };
 
     ws.onerror = () => {
+      setConnectionLost(true);
       setSimulationRunning(false);
     };
   };
@@ -166,6 +171,12 @@ export default function SimulationPage() {
       </div>
 
       {/* Controls Bar */}
+      {connectionLost && (
+        <div className="card w-full flex items-center gap-2 justify-center py-3 bg-[rgba(239,68,68,0.1)] border border-[#EF4444]">
+           <span className="text-sm font-bold text-[#EF4444] animate-pulse">Simulation Interrupted — connection to backend lost. Please launch attack again.</span>
+        </div>
+      )}
+      
       <div
         className="card flex items-center gap-4 flex-wrap"
         style={{

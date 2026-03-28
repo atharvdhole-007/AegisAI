@@ -22,22 +22,21 @@ background_task = None
 
 async def create_kafka_topics():
     broker_url = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
-    try:
-        admin_client = AIOKafkaAdminClient(bootstrap_servers=broker_url)
-        await admin_client.start()
-        topics = [
-            NewTopic(name="logs_raw", num_partitions=1, replication_factor=1),
-            NewTopic(name="simulation_events", num_partitions=1, replication_factor=1)
-        ]
-        await admin_client.create_topics(topics)
-        print("[Kafka] Topics created successfully")
-    except Exception as e:
-        print(f"[Kafka] Topic creation warning (may already exist): {e}")
-    finally:
+    for attempt in range(10):
         try:
+            admin_client = AIOKafkaAdminClient(bootstrap_servers=broker_url)
+            await admin_client.start()
+            topics = [
+                NewTopic(name="logs_raw", num_partitions=1, replication_factor=1),
+                NewTopic(name="simulation_events", num_partitions=1, replication_factor=1)
+            ]
+            await admin_client.create_topics(topics)
+            print("[Kafka] Topics created successfully")
             await admin_client.close()
-        except:
-            pass
+            return
+        except Exception as e:
+            print(f"[Kafka] Attempt {attempt+1}/10 - waiting for Kafka: {e}")
+            await asyncio.sleep(3)
 
 
 async def background_log_generator():
@@ -123,3 +122,20 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "log_buffer_size": len(log_generator.log_buffer)}
+
+
+@app.post("/api/reset")
+async def reset_demo_state():
+    """Reset all in-memory states for a clean demo run."""
+    # 1. Clear log feed
+    log_generator.log_buffer.clear()
+    
+    # 2. Reset playbooks completely
+    from routers.playbook import playbooks
+    playbooks.clear()
+    
+    # 3. Reset Simulation Agent
+    from services.bas_agent import bas_agent
+    bas_agent.reset()
+    
+    return {"status": "success", "message": "Demo state reset completely"}
