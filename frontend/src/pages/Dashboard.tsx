@@ -9,6 +9,7 @@ import ThreatStats from "@/components/ThreatStats";
 import AnalyticsChart from "@/components/AnalyticsChart";
 import LogFeed from "@/components/LogFeed";
 import ThreatAlert from "@/components/ThreatAlert";
+import { WS_BASE_URL } from "@/config";
 import type { LogEntry, ThreatAnalysis, AttackScenario } from "@/types";
 
 const SCENARIOS: { value: AttackScenario; label: string }[] = [
@@ -35,7 +36,7 @@ export default function Dashboard() {
   const [analyzing, setAnalyzing] = useState(false);
 
   // WebSocket for real-time log streaming
-  const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/logs/ws`;
+  const wsUrl = `${WS_BASE_URL}/api/logs/ws`;
 
   const handleWsMessage = useCallback(
     (data: string) => {

@@ -5,6 +5,7 @@ import { Crosshair, Play, Square, FileText, Zap, Server, Database, Globe, Shield
 import axios from "axios";
 import { useStore } from "@/store/useStore";
 import SimulationPanel from "@/components/SimulationPanel";
+import { WS_BASE_URL } from "@/config";
 import type { SimulationStep, SimulationReport } from "@/types";
 
 const SCENARIOS = [
@@ -84,7 +85,7 @@ export default function SimulationPage() {
     setReport(null);
     setSimulationRunning(true);
 
-    const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/simulation/ws`;
+    const wsUrl = `${WS_BASE_URL}/api/simulation/ws`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
